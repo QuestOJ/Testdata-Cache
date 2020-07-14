@@ -2,7 +2,6 @@ package testdata
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -36,9 +35,6 @@ func isCacheNotExpire(filename string, id string, OSS typedef.OSSConfig) bool {
 
 	mtime, _ := time.Parse(time.RFC1123, props.Get("Last-Modified"))
 	mtimestamp := mtime.Unix()
-
-	fmt.Println(mtime)
-	fmt.Println(GetFileCreateTime(filename))
 
 	if mtimestamp > GetFileCreateTime(filename) {
 		return false

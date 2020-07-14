@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const VERSION = "Testdata-Cache 1.1"
+const VERSION = "Testdata-Cache 1.2"
 
 var port string
 var dataDir string

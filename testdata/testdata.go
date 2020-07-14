@@ -97,6 +97,7 @@ func cacheMissed(id string, fileType string, OSS typedef.OSSConfig, writer http.
 	}
 	defer body.Close()
 
+	os.Remove("data/testdata/" + id + "/testdata.zip")
 	fd, err := os.OpenFile("data/testdata/"+id+"/testdata.zip", os.O_WRONLY|os.O_CREATE, 0660)
 	if err != nil {
 		return err

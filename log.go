@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+var logDir string
+var logFile string
+
+func prepareLogDir() {
+	logDir = dataDir + "/log/" + time.Now().Format("20060102")
+	logFile = logDir + "/main.log"
+
+	os.Mkdir(logDir, 0770)
+}
+
 func writeLogIntoFile(text string) {
 	d1 := []byte(text)
 
@@ -26,6 +36,8 @@ func writeLogIntoFile(text string) {
 }
 
 func log(level int, text string) {
+	prepareLogDir()
+
 	writeLogIntoFile(time.Now().Format("2006-01-02 15:04:05"))
 
 	if level == 1 {
@@ -34,7 +46,9 @@ func log(level int, text string) {
 		os.Exit(2)
 	} else if level == 2 {
 		writeLogIntoFile(" [Warning] " + text + "\n")
+		fmt.Println("[Warning] " + text)
 	} else {
 		writeLogIntoFile(" [Info] " + text + "\n")
+		fmt.Println("[Info] " + text)
 	}
 }

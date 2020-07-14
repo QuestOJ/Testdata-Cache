@@ -6,23 +6,21 @@ import (
 	"os"
 )
 
-func version() {
-	fmt.Println("Testdata Cache 1.0.0")
-}
+const VERSION = "Testdata-Cache 1.1"
 
 var port string
 var dataDir string
 
 func main() {
-	version()
+	fmt.Println(VERSION)
 
 	flag.StringVar(&dataDir, "d", "./data", "data dir")
+	flag.StringVar(&port, "p", "8081", "port")
+
 	flag.Parse()
 
-	port = flag.Arg(0)
-
-	if len(flag.Args()) == 0 || port == "" {
-		fmt.Println("Usage: testdata-cache [port] [-d data dir] \n\nOptions:")
+	if port == "" || dataDir == "" {
+		fmt.Println("Usage: testdata-cache [-d data dir] [-p port] \n\nOptions:")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

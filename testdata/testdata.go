@@ -2,7 +2,6 @@ package testdata
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,15 +19,20 @@ func fileExist(path string) bool {
 	return !os.IsNotExist(err)
 }
 
+func cacheNotExpire(filename string, id string, OSS typedef.OSSConfig) bool {
+	return true
+}
+
 func cacheRead(filename string) ([]byte, error) {
 	fileData, err := ioutil.ReadFile(filename)
 	return fileData, err
 }
 
-func cacheExist(id string, fileType string) bool {
+func cacheExist(id string, fileType string, OSS typedef.OSSConfig) bool {
 	switch fileType {
 	case "testdata":
-		return fileExist(dataPath + "/testdata/" + id + "/testdata.zip")
+		filepath := dataPath + "/testdata/" + id + "/testdata.zip"
+		return fileExist(filepath) && cacheNotExpire(filepath, id, OSS)
 	default:
 		return false
 	}
@@ -44,7 +48,7 @@ func cacheWrite(id string, fileType string, writer http.ResponseWriter) error {
 		writer.Write(res)
 		return nil
 	default:
-		return errors.New("no such file")
+		return errors.New("Invaild filetype")
 	}
 }
 
@@ -56,7 +60,7 @@ func cacheMissed(id string, fileType string, OSS typedef.OSSConfig, writer http.
 		name = "data/" + id + "/testdata.zip"
 		break
 	default:
-		return errors.New("no such file")
+		return errors.New("Invaild filetype")
 	}
 
 	client, err := oss.New(OSS.EndPoint, OSS.Key, OSS.Secret)
@@ -77,8 +81,7 @@ func cacheMissed(id string, fileType string, OSS typedef.OSSConfig, writer http.
 
 	fd, err := os.OpenFile("data/testdata/"+id+"/testdata.zip", os.O_WRONLY|os.O_CREATE, 0660)
 	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(-1)
+		return err
 	}
 	defer fd.Close()
 
@@ -86,15 +89,26 @@ func cacheMissed(id string, fileType string, OSS typedef.OSSConfig, writer http.
 	return nil
 }
 
-func Get(id string, fileType string, datapath string, OSS typedef.OSSConfig, writer http.ResponseWriter) {
+func Get(id string, fileType string, datapath string, OSS typedef.OSSConfig, writer http.ResponseWriter) error {
 	dataPath = datapath
 
 	os.Mkdir(dataPath+"/testdata/"+id, 0770)
 
-	if cacheExist(id, fileType) {
-		cacheWrite(id, fileType, writer)
+	if cacheExist(id, fileType, OSS) {
+		err := cacheWrite(id, fileType, writer)
+		if err != nil {
+			return err
+		}
 	} else {
-		cacheMissed(id, fileType, OSS, writer)
-		cacheWrite(id, fileType, writer)
+		err := cacheMissed(id, fileType, OSS, writer)
+		if err != nil {
+			return err
+		}
+		err = cacheWrite(id, fileType, writer)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

@@ -8,11 +8,25 @@ import (
 )
 
 func startServer() {
+	log(2, "Listening on 0.0.0.0:"+port)
+
+	http.HandleFunc("/", sayHello)
 	http.HandleFunc("/download", download)
-	http.ListenAndServe("0.0.0.0:"+port, nil)
+	err := http.ListenAndServe("0.0.0.0:"+port, nil)
+
+	if err != nil {
+		log(1, err.Error())
+	}
+}
+
+func sayHello(writer http.ResponseWriter, request *http.Request) {
+	log(3, "Recevie request from "+request.RemoteAddr+" path "+request.URL.Path)
+	writer.Write([]byte(VERSION))
 }
 
 func download(writer http.ResponseWriter, request *http.Request) {
+	log(3, "Recevie request from "+request.RemoteAddr+" path "+request.URL.Path)
+
 	judgerName := request.PostFormValue("judger_name")
 
 	if judgerName == "" {
@@ -60,5 +74,8 @@ func download(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	testdata.Get(id, filetype, dataDir, config.OSS, writer)
+	err = testdata.Get(id, filetype, dataDir, config.OSS, writer)
+	if err != nil {
+		log(2, err.Error())
+	}
 }

@@ -2,12 +2,13 @@ package testdata
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/QuestOJ/testdata-cache/typedef"
 
@@ -33,8 +34,13 @@ func isCacheNotExpire(filename string, id string, OSS typedef.OSSConfig) bool {
 	bucket, _ := client.Bucket(OSS.BucketName)
 	props, _ := bucket.GetObjectDetailedMeta("data/" + id + "/testdata.zip")
 
-	mtime, _ := strconv.ParseInt(props.Get("x-oss-meta-mtime"), 10, 64)
-	if mtime > GetFileCreateTime(filename) {
+	mtime, _ := time.Parse(time.RFC1123, props.Get("Last-Modified"))
+	mtimestamp := mtime.Unix()
+
+	fmt.Println(mtime)
+	fmt.Println(GetFileCreateTime(filename))
+
+	if mtimestamp > GetFileCreateTime(filename) {
 		return false
 	}
 
@@ -49,6 +55,9 @@ func cacheRead(filename string) ([]byte, error) {
 func cacheExist(id string, fileType string, OSS typedef.OSSConfig) bool {
 	switch fileType {
 	case "testdata":
+		for fileExist(dataPath + "/testdata/" + id + "/.lock") {
+			time.Sleep(200 * time.Millisecond)
+		}
 		filepath := dataPath + "/testdata/" + id + "/testdata.zip"
 		return fileExist(filepath) && isCacheNotExpire(filepath, id, OSS)
 	default:
@@ -109,6 +118,14 @@ func cacheMissed(id string, fileType string, OSS typedef.OSSConfig, writer http.
 	return nil
 }
 
+func createLock(id string) {
+	os.Create(dataPath + "/testdata/" + id + "/.lock")
+}
+
+func deleteLock(id string) {
+	os.Remove(dataPath + "/testdata/" + id + "/.lock")
+}
+
 func Get(id string, fileType string, datapath string, OSS typedef.OSSConfig, writer http.ResponseWriter) error {
 	dataPath = datapath
 
@@ -120,6 +137,7 @@ func Get(id string, fileType string, datapath string, OSS typedef.OSSConfig, wri
 			return err
 		}
 	} else {
+		createLock(id)
 		err := cacheMissed(id, fileType, OSS, writer)
 		if err != nil {
 			return err
@@ -128,6 +146,7 @@ func Get(id string, fileType string, datapath string, OSS typedef.OSSConfig, wri
 		if err != nil {
 			return err
 		}
+		deleteLock(id)
 	}
 
 	return nil

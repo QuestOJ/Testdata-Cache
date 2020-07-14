@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
+	"syscall"
 
 	"github.com/QuestOJ/testdata-cache/typedef"
 
@@ -14,12 +16,28 @@ import (
 
 var dataPath string
 
+func GetFileCreateTime(path string) int64 {
+	fileInfo, _ := os.Stat(path)
+	stat_t := fileInfo.Sys().(*syscall.Stat_t)
+	tCreate := int64(stat_t.Ctim.Sec)
+	return tCreate
+}
+
 func fileExist(path string) bool {
 	_, err := os.Lstat(path)
 	return !os.IsNotExist(err)
 }
 
-func cacheNotExpire(filename string, id string, OSS typedef.OSSConfig) bool {
+func isCacheNotExpire(filename string, id string, OSS typedef.OSSConfig) bool {
+	client, _ := oss.New(OSS.EndPoint, OSS.Key, OSS.Secret)
+	bucket, _ := client.Bucket(OSS.BucketName)
+	props, _ := bucket.GetObjectDetailedMeta("data/" + id + "/testdata.zip")
+
+	mtime, _ := strconv.ParseInt(props.Get("x-oss-meta-mtime"), 10, 64)
+	if mtime > GetFileCreateTime(filename) {
+		return false
+	}
+
 	return true
 }
 
@@ -32,7 +50,7 @@ func cacheExist(id string, fileType string, OSS typedef.OSSConfig) bool {
 	switch fileType {
 	case "testdata":
 		filepath := dataPath + "/testdata/" + id + "/testdata.zip"
-		return fileExist(filepath) && cacheNotExpire(filepath, id, OSS)
+		return fileExist(filepath) && isCacheNotExpire(filepath, id, OSS)
 	default:
 		return false
 	}
